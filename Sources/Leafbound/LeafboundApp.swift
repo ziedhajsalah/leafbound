@@ -6,6 +6,8 @@ import UniformTypeIdentifiers
 
 @main
 struct LeafboundApp: App {
+    @NSApplicationDelegateAdaptor(LeafboundAppDelegate.self) private var appDelegate
+
     private let updaterController = Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") is String
         ? SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
         : nil
@@ -26,6 +28,17 @@ struct LeafboundApp: App {
                 }
             }
         }
+    }
+}
+
+private final class LeafboundAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        guard let iconFile = Bundle.main.object(forInfoDictionaryKey: "CFBundleIconFile") as? String,
+              let iconURL = Bundle.main.url(forResource: iconFile, withExtension: nil),
+              let icon = NSImage(contentsOf: iconURL) else { return }
+
+        // The Dock can retain the generic tile after an update replaces the bundle.
+        NSApplication.shared.applicationIconImage = icon
     }
 }
 
