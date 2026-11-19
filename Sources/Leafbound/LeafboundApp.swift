@@ -1,10 +1,15 @@
 import AppKit
 import LeafboundCore
+import Sparkle
 import SwiftUI
 import UniformTypeIdentifiers
 
 @main
 struct LeafboundApp: App {
+    private let updaterController = Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") is String
+        ? SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        : nil
+
     var body: some Scene {
         Window("Leafbound", id: "converter") {
             ConverterView()
@@ -15,6 +20,11 @@ struct LeafboundApp: App {
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            if let updaterController {
+                CommandGroup(after: .appInfo) {
+                    CheckForUpdatesMenuItem(updater: updaterController.updater)
+                }
+            }
         }
     }
 }

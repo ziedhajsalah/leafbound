@@ -15,6 +15,10 @@ Get `Leafbound-macOS-arm64.zip` from the [latest GitHub release](https://github.
 
 If **Open Anyway** is missing, try opening Leafbound again, then return to **Privacy & Security**. [Apple Support](https://support.apple.com/en-us/102445)
 
+### Update Leafbound
+
+Open **Leafbound → Check for Updates…**. When a newer build is available, follow the prompts to install it and relaunch. If your copy predates this menu item, download the [latest release](https://github.com/ziedhajsalah/leafbound/releases/latest) once to get the updater.
+
 ## Run locally
 
 Build with Swift 6 and the macOS SDK, then open the app on macOS 14 or later.

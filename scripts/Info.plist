@@ -24,5 +24,19 @@
     <string>14.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>SUFeedURL</key>
+    <string>https://github.com/ziedhajsalah/leafbound/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>BS5DjQV941O1N3VbwX4sHkEXIj9UHrrT3pBuoUEKmzs=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <false/>
+    <key>SUAllowsAutomaticUpdates</key>
+    <false/>
+    <key>SUVerifyUpdateBeforeExtraction</key>
+    <true/>
+    <key>SURequireSignedFeed</key>
+    <true/>
+    <key>SUSignedFeedFailureExpirationInterval</key>
+    <integer>0</integer>
 </dict>
 </plist>

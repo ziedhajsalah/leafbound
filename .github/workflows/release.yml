@@ -13,6 +13,7 @@ jobs:
     timeout-minutes: 15
     env:
       RELEASE_ASSET: Leafbound-macOS-arm64.zip
+      RELEASE_DIR: dist/release
     steps:
       - name: Check out the pushed commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -21,11 +22,32 @@ jobs:
 
       - name: Build and package the app
         shell: bash
+        env:
+          LEAFBOUND_BUILD_NUMBER: ${{ github.run_number }}
         run: |
           ./scripts/build-app.sh
           lipo dist/Leafbound.app/Contents/MacOS/Leafbound -verify_arch arm64
-          codesign --verify --strict dist/Leafbound.app
-          ditto -c -k --sequesterRsrc --keepParent dist/Leafbound.app "$RELEASE_ASSET"
+          codesign --verify --deep --strict dist/Leafbound.app
+          mkdir -p "$RELEASE_DIR"
+          ditto -c -k --sequesterRsrc --keepParent dist/Leafbound.app "$RELEASE_DIR/$RELEASE_ASSET"
+
+      - name: Sign the Sparkle update and feed
+        shell: bash
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.LEAFBOUND_SPARKLE_PRIVATE_KEY }}
+        run: |
+          : "${UPDATE_SIGNING_KEY:?Set the LEAFBOUND_SPARKLE_PRIVATE_KEY Actions secret}"
+          tag="build-${GITHUB_RUN_NUMBER}-${GITHUB_SHA:0:7}"
+          appcast_tools=(.build/artifacts/*/Sparkle/bin/generate_appcast)
+          printf '%s\n' "$UPDATE_SIGNING_KEY" | "${appcast_tools[0]}" --ed-key-file - \
+            --download-url-prefix "https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/" \
+            --maximum-deltas 0 "$RELEASE_DIR"
+
+      - name: Verify the update against the app’s public key
+        shell: bash
+        run: |
+          swift scripts/verify-update.swift dist/Leafbound.app/Contents/Info.plist \
+            "$RELEASE_DIR/appcast.xml" "$RELEASE_DIR/$RELEASE_ASSET"
 
       - name: Publish GitHub release
         shell: bash
@@ -34,17 +56,15 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           tag="build-${GITHUB_RUN_NUMBER}-${GITHUB_SHA:0:7}"
-          if release=$(gh release view "$tag" --json assets,isDraft 2>/dev/null); then
-            if ! jq -e --arg name "$RELEASE_ASSET" \
-              'any(.assets[]; .name == $name and .state == "uploaded" and .size > 0)' \
-              <<< "$release" >/dev/null; then
-              gh release upload "$tag" "$RELEASE_ASSET" --clobber
-            fi
-            if jq -e '.isDraft' <<< "$release" >/dev/null; then
+          assets=("$RELEASE_DIR/$RELEASE_ASSET" "$RELEASE_DIR/appcast.xml")
+          if draft=$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [[ "$draft" == true ]]; then
+              # A retry must publish the ZIP and its signed feed from the same attempt.
+              gh release upload "$tag" "${assets[@]}" --clobber
               gh release edit "$tag" --draft=false
             fi
           else
-            gh release create "$tag" "$RELEASE_ASSET" \
+            gh release create "$tag" "${assets[@]}" \
               --target "$GITHUB_SHA" \
               --title "Leafbound build ${GITHUB_RUN_NUMBER}" \
               --notes "For Apple silicon Macs on macOS 14 or later. This build is ad hoc signed and unnotarized." \

@@ -19,8 +19,16 @@ swift build "${swift_options[@]}" --product Leafbound
 binary_directory=$(swift build "${swift_options[@]}" --show-bin-path)
 
 app="$PWD/dist/Leafbound.app"
-mkdir -p "$app/Contents/MacOS"
+sparkle_frameworks=("$build_directory"/artifacts/*/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework(N))
+if (( ${#sparkle_frameworks} != 1 )); then
+  print -u2 'Could not locate the SwiftPM Sparkle framework.'
+  exit 1
+fi
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Frameworks"
+rm -rf -- "$app/Contents/Frameworks/Sparkle.framework"
+ditto "$sparkle_frameworks[1]" "$app/Contents/Frameworks/Sparkle.framework"
 cp "$binary_directory/Leafbound" "$app/Contents/MacOS/Leafbound"
 cp scripts/Info.plist "$app/Contents/Info.plist"
+plutil -replace CFBundleVersion -string "${LEAFBOUND_BUILD_NUMBER:-1}" "$app/Contents/Info.plist"
 codesign --force --sign - "$app"
 print -r -- "$app"
