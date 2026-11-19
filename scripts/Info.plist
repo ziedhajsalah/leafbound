@@ -8,6 +8,8 @@
     <string>Leafbound</string>
     <key>CFBundleExecutable</key>
     <string>Leafbound</string>
+    <key>CFBundleIconFile</key>
+    <string>Leafbound.icns</string>
     <key>CFBundleIdentifier</key>
     <string>app.leafbound.converter</string>
     <key>CFBundleInfoDictionaryVersion</key>
