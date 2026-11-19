@@ -6,6 +6,15 @@ Leafbound is a macOS app that converts a PDF, HTML file, or web link into a refl
 
 Get `Leafbound-macOS-arm64.zip` from the [latest GitHub release](https://github.com/ziedhajsalah/leafbound/releases/latest). Each push to `main` publishes a build for Apple silicon Macs running macOS 14 or later. The release build is ad hoc signed and unnotarized.
 
+### Open Leafbound for the first time
+
+1. Unzip the download and open `Leafbound.app`.
+2. If macOS says it cannot verify Leafbound, click **Done**.
+3. Go to **System Settings → Privacy & Security**, scroll down to **Security**, and click **Open Anyway** next to the Leafbound message.
+4. Confirm when prompted. macOS remembers the exception for that copy of the app.
+
+If **Open Anyway** is missing, try opening Leafbound again, then return to **Privacy & Security**. [Apple Support](https://support.apple.com/en-us/102445)
+
 ## Run locally
 
 Build with Swift 6 and the macOS SDK, then open the app on macOS 14 or later.
