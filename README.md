@@ -4,7 +4,7 @@ Leafbound is a macOS app that converts a PDF, HTML file, or web link into a refl
 
 ## Download
 
-Get `Leafbound-macOS-arm64.zip` from the [latest GitHub release](https://github.com/ziedhajsalah/leafbound/releases/latest). Each push to `main` publishes a build for Apple silicon Macs running macOS 14 or later. The release build is ad hoc signed and unnotarized.
+Get `Leafbound-macOS-arm64.zip` from the [latest GitHub release](https://github.com/ziedhajsalah/leafbound/releases/latest). Leafbound runs on Apple silicon Macs with macOS 14 or later. Releases are ad hoc signed and unnotarized.
 
 ### Open Leafbound for the first time
 
@@ -17,7 +17,11 @@ If **Open Anyway** is missing, try opening Leafbound again, then return to **Pri
 
 ### Update Leafbound
 
-Open **Leafbound → Check for Updates…**. When a newer build is available, follow the prompts to install it and relaunch. If your copy predates this menu item, download the [latest release](https://github.com/ziedhajsalah/leafbound/releases/latest) once to get the updater.
+Open **Leafbound → Check for Updates…**. When a newer version is available, follow the prompts to install it and relaunch. If your copy predates this menu item, download the [latest release](https://github.com/ziedhajsalah/leafbound/releases/latest) once to get the updater.
+
+### Release versions
+
+Leafbound uses `MAJOR.MINOR.PATCH` versions, starting at `0.0.4`. Pushes to `main` publish the next patch version by default and tag it on GitHub, for example `v0.0.5`. To publish a higher minor or major version, set `CFBundleShortVersionString` in `scripts/Info.plist` to the intended version, such as `0.1.0`, before pushing. Local builds use the version in that file.
 
 ## Run locally
 

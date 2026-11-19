@@ -29,6 +29,9 @@ rm -rf -- "$app/Contents/Frameworks/Sparkle.framework"
 ditto "$sparkle_frameworks[1]" "$app/Contents/Frameworks/Sparkle.framework"
 cp "$binary_directory/Leafbound" "$app/Contents/MacOS/Leafbound"
 cp scripts/Info.plist "$app/Contents/Info.plist"
+if [[ -n "${LEAFBOUND_VERSION:-}" ]]; then
+  plutil -replace CFBundleShortVersionString -string "$LEAFBOUND_VERSION" "$app/Contents/Info.plist"
+fi
 plutil -replace CFBundleVersion -string "${LEAFBOUND_BUILD_NUMBER:-1}" "$app/Contents/Info.plist"
 codesign --force --sign - "$app"
 print -r -- "$app"

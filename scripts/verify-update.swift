@@ -17,7 +17,16 @@ let properties = try PropertyListSerialization.propertyList(
     from: Data(contentsOf: appInfo), format: nil
 ) as? [String: Any]
 let feed = try XMLDocument(contentsOf: appcast)
+let feedVersion = try feed.nodes(forXPath: "/rss/channel/item/*[local-name()='shortVersionString']").first
+let feedBuild = try feed.nodes(forXPath: "/rss/channel/item/*[local-name()='version']").first
 let enclosure = try feed.nodes(forXPath: "/rss/channel/item/enclosure").first as? XMLElement
+
+guard let version = properties?["CFBundleShortVersionString"] as? String,
+      let build = properties?["CFBundleVersion"] as? String,
+      feedVersion?.stringValue == version,
+      feedBuild?.stringValue == build else {
+    fail("The update feed’s version and build must match the app bundle.")
+}
 
 guard let publicKey = properties?["SUPublicEDKey"] as? String,
       let keyBytes = Data(base64Encoded: publicKey),

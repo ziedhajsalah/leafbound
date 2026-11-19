@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: leafbound-release
+  queue: max
+
 permissions:
   contents: write
 
@@ -18,9 +22,42 @@ jobs:
       - name: Check out the pushed commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
+      - name: Choose the release version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version=$(plutil -extract CFBundleShortVersionString raw scripts/Info.plist)
+          semver_tag='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          if [[ ! "v$version" =~ $semver_tag ]]; then
+            echo "CFBundleShortVersionString must use MAJOR.MINOR.PATCH" >&2
+            exit 1
+          fi
+
+          previous_tag=$(gh release list --exclude-drafts --exclude-pre-releases \
+            --json tagName,isLatest --jq '.[] | select(.isLatest) | .tagName')
+          if [[ "$previous_tag" =~ $semver_tag ]]; then
+            previous_commit=$(git rev-parse --verify "refs/tags/$previous_tag^{commit}")
+            if git merge-base --is-ancestor "$GITHUB_SHA" "$previous_commit"; then
+              echo "This commit is already included in $previous_tag."
+              exit 0
+            fi
+
+            if [[ $(printf '%s\n' "v$version" "$previous_tag" | sort -V | tail -n 1) == "$previous_tag" ]]; then
+              previous_version=${previous_tag#v}
+              version="${previous_version%.*}.$(( ${previous_version##*.} + 1 ))"
+            fi
+          fi
+
+          printf 'LEAFBOUND_VERSION=%s\nRELEASE_TAG=v%s\n' "$version" "$version" >> "$GITHUB_ENV"
+          printf 'Publishing Leafbound %s\n' "$version"
+
       - name: Build and package the app
+        if: env.RELEASE_TAG != ''
         shell: bash
         env:
           LEAFBOUND_BUILD_NUMBER: ${{ github.run_number }}
@@ -32,41 +69,47 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent dist/Leafbound.app "$RELEASE_DIR/$RELEASE_ASSET"
 
       - name: Sign the Sparkle update and feed
+        if: env.RELEASE_TAG != ''
         shell: bash
         env:
           UPDATE_SIGNING_KEY: ${{ secrets.LEAFBOUND_SPARKLE_PRIVATE_KEY }}
         run: |
           : "${UPDATE_SIGNING_KEY:?Set the LEAFBOUND_SPARKLE_PRIVATE_KEY Actions secret}"
-          tag="build-${GITHUB_RUN_NUMBER}-${GITHUB_SHA:0:7}"
           appcast_tools=(.build/artifacts/*/Sparkle/bin/generate_appcast)
           printf '%s\n' "$UPDATE_SIGNING_KEY" | "${appcast_tools[0]}" --ed-key-file - \
-            --download-url-prefix "https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/" \
+            --download-url-prefix "https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG/" \
             --maximum-deltas 0 "$RELEASE_DIR"
 
       - name: Verify the update against the app’s public key
+        if: env.RELEASE_TAG != ''
         shell: bash
         run: |
           swift scripts/verify-update.swift dist/Leafbound.app/Contents/Info.plist \
             "$RELEASE_DIR/appcast.xml" "$RELEASE_DIR/$RELEASE_ASSET"
 
       - name: Publish GitHub release
+        if: env.RELEASE_TAG != ''
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          tag="build-${GITHUB_RUN_NUMBER}-${GITHUB_SHA:0:7}"
           assets=("$RELEASE_DIR/$RELEASE_ASSET" "$RELEASE_DIR/appcast.xml")
-          if draft=$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null); then
+          if tag_commit=$(git rev-parse --verify --quiet "refs/tags/$RELEASE_TAG^{commit}") &&
+             [[ "$tag_commit" != "$GITHUB_SHA" ]]; then
+            echo "Tag $RELEASE_TAG already points to a different commit." >&2
+            exit 1
+          fi
+          if draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft 2>/dev/null); then
             if [[ "$draft" == true ]]; then
               # A retry must publish the ZIP and its signed feed from the same attempt.
-              gh release upload "$tag" "${assets[@]}" --clobber
-              gh release edit "$tag" --draft=false
+              gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber
+              gh release edit "$RELEASE_TAG" --target "$GITHUB_SHA" --draft=false --latest
             fi
           else
-            gh release create "$tag" "${assets[@]}" \
+            gh release create "$RELEASE_TAG" "${assets[@]}" \
               --target "$GITHUB_SHA" \
-              --title "Leafbound build ${GITHUB_RUN_NUMBER}" \
+              --title "Leafbound $LEAFBOUND_VERSION" \
               --notes "For Apple silicon Macs on macOS 14 or later. This build is ad hoc signed and unnotarized." \
-              --generate-notes
+              --generate-notes --latest
           fi
