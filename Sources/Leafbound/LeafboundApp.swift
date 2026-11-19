@@ -86,17 +86,36 @@ private struct ConverterView: View {
                     .font(.system(size: 16, weight: .semibold))
             }
             Spacer()
-            Link(destination: sendToKindle) {
+            Button(action: openSendToKindle) {
                 Label("Send to Kindle", systemImage: "arrow.up.right")
                     .labelStyle(TrailingIconLabelStyle())
                     .font(.system(size: 12, weight: .semibold))
             }
+            .buttonStyle(.plain)
             .foregroundStyle(Palette.moss)
-            .help("Open Amazon Send to Kindle")
+            .help("Open the Kindle app or Amazon Send to Kindle on the web")
         }
         .padding(.leading, 88)
         .padding(.trailing, 28)
         .frame(height: 57)
+    }
+
+    private func openSendToKindle() {
+        Task {
+            let workspace = NSWorkspace.shared
+            // Prefer the current Kindle app over Kindle Classic.
+            let kindleApp = workspace.urlForApplication(withBundleIdentifier: "com.amazon.Lassen")
+                ?? workspace.urlForApplication(withBundleIdentifier: "com.amazon.Kindle")
+
+            if let kindleApp {
+                let configuration = NSWorkspace.OpenConfiguration()
+                if (try? await workspace.openApplication(at: kindleApp, configuration: configuration)) != nil {
+                    return
+                }
+            }
+
+            workspace.open(sendToKindle)
+        }
     }
 
     private var workspace: some View {

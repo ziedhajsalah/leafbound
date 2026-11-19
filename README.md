@@ -30,7 +30,7 @@ open dist/Leafbound.app
 
 1. Drop a PDF or HTML file into **Local file**, or paste a public HTTP(S) address into **Web link**.
 2. Select **Create EPUB** and choose where to save the file.
-3. Upload the saved EPUB using [Amazon Send to Kindle](https://www.amazon.com/sendtokindle).
+3. Click **Send to Kindle** to open the Kindle app on your Mac. If Leafbound can't open the app, it opens the upload page in your browser. You can upload the saved EPUB to your Kindle library at [Amazon Send to Kindle](https://www.amazon.com/sendtokindle).
 
 Local files are processed on your Mac. Leafbound sends web requests when you use a web link and leaves the upload to you.
 
