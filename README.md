@@ -2,6 +2,10 @@
 
 Leafbound is a macOS app that converts a PDF, HTML file, or web link into a reflowable EPUB for Amazon Send to Kindle.
 
+## Download
+
+Get `Leafbound-macOS-arm64.zip` from the [latest GitHub release](https://github.com/ziedhajsalah/leafbound/releases/latest). Each push to `main` publishes a build for Apple silicon Macs running macOS 14 or later. The release build is ad hoc signed and unnotarized.
+
 ## Run locally
 
 Build with Swift 6 and the macOS SDK, then open the app on macOS 14 or later.

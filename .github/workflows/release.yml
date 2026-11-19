@@ -1,0 +1,52 @@
+name: Release Leafbound
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 15
+    env:
+      RELEASE_ASSET: Leafbound-macOS-arm64.zip
+    steps:
+      - name: Check out the pushed commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build and package the app
+        shell: bash
+        run: |
+          ./scripts/build-app.sh
+          lipo dist/Leafbound.app/Contents/MacOS/Leafbound -verify_arch arm64
+          codesign --verify --strict dist/Leafbound.app
+          ditto -c -k --sequesterRsrc --keepParent dist/Leafbound.app "$RELEASE_ASSET"
+
+      - name: Publish GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="build-${GITHUB_RUN_NUMBER}-${GITHUB_SHA:0:7}"
+          if release=$(gh release view "$tag" --json assets,isDraft 2>/dev/null); then
+            if ! jq -e --arg name "$RELEASE_ASSET" \
+              'any(.assets[]; .name == $name and .state == "uploaded" and .size > 0)' \
+              <<< "$release" >/dev/null; then
+              gh release upload "$tag" "$RELEASE_ASSET" --clobber
+            fi
+            if jq -e '.isDraft' <<< "$release" >/dev/null; then
+              gh release edit "$tag" --draft=false
+            fi
+          else
+            gh release create "$tag" "$RELEASE_ASSET" \
+              --target "$GITHUB_SHA" \
+              --title "Leafbound build ${GITHUB_RUN_NUMBER}" \
+              --notes "For Apple silicon Macs on macOS 14 or later. This build is ad hoc signed and unnotarized." \
+              --generate-notes
+          fi
